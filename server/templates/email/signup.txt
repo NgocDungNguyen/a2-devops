@@ -1,0 +1,10 @@
+Hi {{ user.first_name|default:"there" }},
+
+Welcome to the {{ store_name }}! Your account has been created and you are
+ready to shop.
+
+Browse the store: {{ client_url }}/shop
+Manage your account: {{ client_url }}/dashboard
+
+Thanks for joining us,
+The {{ store_name }} team

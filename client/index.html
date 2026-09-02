@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#E60028" />
+    <meta
+      name="description"
+      content="The RMIT Store — official university apparel and merchandise."
+    />
+    <link rel="icon" href="/images/favicon.png" />
+    <title>RMIT Store</title>
+
+    <!--
+      Runtime configuration. Loaded before the application bundle, from a file
+      that Vite copies to dist/ byte-for-byte with no content hash in its name.
+
+      That is what lets one built artifact be deployed to any environment:
+      change dist/config.js on the server, reload, done. No rebuild, no
+      environment-specific image. See client/public/config.js.
+
+      Keep this a plain (non-module) script with a root-absolute src, or Vite
+      will pull it into the module graph and hash its filename.
+    -->
+    <script src="/config.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

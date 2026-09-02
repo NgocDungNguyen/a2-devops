@@ -1,0 +1,8 @@
+New message from the {{ store_name }} contact form.
+
+Name:    {{ contact.name }}
+Email:   {{ contact.email }}
+Received: {{ contact.created_at }}
+
+Message:
+{{ contact.message }}

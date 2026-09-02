@@ -1,0 +1,15 @@
+Hi {{ merchant.name }},
+
+Good news — your application to sell on the {{ store_name }} has been approved.
+
+Set a password to finish creating your seller account:
+
+    {{ signup_link }}
+
+The link expires in seven days.
+
+Once you are in, you can add products under your brand "{{ merchant.brand_name }}".
+Note that an administrator needs to activate your brand before your products
+appear in the store.
+
+The {{ store_name }} team

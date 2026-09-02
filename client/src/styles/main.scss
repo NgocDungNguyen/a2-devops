@@ -1,0 +1,479 @@
+// ---------------------------------------------------------------------------
+// RMIT Store — global stylesheet
+//
+// Bootstrap 5 with the RMIT palette, plus the handful of components Bootstrap
+// does not provide: the two slide-out drawers, the shop toolbar, the star
+// rating bars and the dashboard grid.
+// ---------------------------------------------------------------------------
+
+@use 'variables' as *;
+
+@import 'bootstrap/scss/bootstrap';
+
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+
+// --- base ------------------------------------------------------------------
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+a {
+  color: inherit;
+
+  &:hover {
+    color: $primary;
+  }
+}
+
+// Only show a focus ring for keyboard users, not on every mouse click.
+body:not(.user-is-tabbing) *:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+.page-title {
+  color: $rmit-navy;
+  font-weight: 600;
+}
+
+.text-brand {
+  color: $primary !important;
+}
+
+.bg-navy {
+  background-color: $rmit-navy !important;
+}
+
+// --- header ----------------------------------------------------------------
+
+.info-bar {
+  background: $rmit-navy;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.store-header {
+  border-bottom: 1px solid $theme-bright-gray;
+  background: #fff;
+
+  .navbar-brand img {
+    height: 40px;
+  }
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: $rmit-navy;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: $theme-athens-gray;
+  }
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: $primary;
+  color: #fff;
+  font-size: 0.65rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+// --- search autosuggest ----------------------------------------------------
+
+.search-suggestions {
+  position: absolute;
+  z-index: 1040;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid $theme-bright-gray;
+  border-radius: $border-radius;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  button {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+
+    &:hover,
+    &.is-active {
+      background: $theme-athens-gray;
+    }
+
+    img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+  }
+}
+
+// --- drawers ---------------------------------------------------------------
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1045;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  width: min(#{$drawer-width}, 100vw);
+  background: #fff;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
+
+  &--right {
+    right: 0;
+  }
+
+  &--left {
+    left: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid $theme-bright-gray;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
+  }
+
+  &__footer {
+    border-top: 1px solid $theme-bright-gray;
+    padding: 1rem 1.25rem;
+  }
+}
+
+.slide-right-enter-active,
+.slide-right-leave-active,
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: transform 0.25s ease;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  transform: translateX(100%);
+}
+
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// --- product cards ---------------------------------------------------------
+
+.product-card {
+  position: relative;
+  height: 100%;
+  border: 1px solid $theme-bright-gray;
+  border-radius: $border-radius;
+  background: #fff;
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  &__image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: $theme-gray;
+  }
+
+  &__body {
+    padding: 0.85rem 1rem 1rem;
+  }
+
+  &__brand {
+    color: $muted-text;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+    color: $rmit-navy;
+    font-weight: 500;
+  }
+
+  &__price {
+    color: $primary;
+    font-weight: 600;
+  }
+}
+
+.wishlist-button {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: $muted-text;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+
+  &.is-liked {
+    color: $primary;
+  }
+}
+
+// --- shop ------------------------------------------------------------------
+
+.filter-panel {
+  border: 1px solid $theme-bright-gray;
+  border-radius: $border-radius;
+  padding: 1.25rem;
+
+  h6 {
+    color: $rmit-navy;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.rating-filter .btn {
+  text-align: left;
+}
+
+// --- stars -----------------------------------------------------------------
+
+.star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  color: #f5a623;
+  line-height: 1;
+
+  svg {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+.rating-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: $theme-bright-gray;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: #f5a623;
+  }
+}
+
+.review-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: $rmit-navy;
+  color: #fff;
+  font-weight: 600;
+}
+
+// --- dashboard -------------------------------------------------------------
+
+.dashboard-sidebar {
+  border: 1px solid $theme-bright-gray;
+  border-radius: $border-radius;
+  overflow: hidden;
+
+  .list-group-item {
+    border: 0;
+    border-bottom: 1px solid $theme-bright-gray;
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+
+    &.router-link-active {
+      background: rgba($primary, 0.07);
+      color: $primary;
+      font-weight: 500;
+      border-left: 3px solid $primary;
+    }
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.subpage-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid $theme-bright-gray;
+}
+
+.data-card {
+  border: 1px solid $theme-bright-gray;
+  border-radius: $border-radius;
+  padding: 1rem 1.15rem;
+}
+
+// --- banners / home --------------------------------------------------------
+
+.hero {
+  position: relative;
+  min-height: 380px;
+  border-radius: $border-radius;
+  background: linear-gradient(120deg, $rmit-navy 0%, #1a1a7a 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+.hero__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+  padding: 3.5rem 2.5rem;
+  max-width: 620px;
+}
+
+// --- footer ----------------------------------------------------------------
+
+.store-footer {
+  background: $rmit-navy;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+
+  h6 {
+    color: #fff;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  a:hover {
+    color: #fff;
+  }
+}
+
+// --- toasts ----------------------------------------------------------------
+
+.toast-host {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(360px, calc(100vw - 2rem));
+}
+
+// --- utilities -------------------------------------------------------------
+
+.object-fit-cover {
+  object-fit: cover;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}

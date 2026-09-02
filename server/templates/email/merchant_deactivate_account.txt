@@ -1,0 +1,9 @@
+Hi {{ merchant.name }},
+
+Your seller account on the {{ store_name }} has been deactivated, and your
+products have been removed from the storefront.
+
+If you believe this is a mistake, please reply to this email or contact the
+store administrators at {{ client_url }}/contact.
+
+The {{ store_name }} team

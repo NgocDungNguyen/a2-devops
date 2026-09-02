@@ -1,0 +1,10 @@
+Hello,
+
+Thanks for subscribing to the {{ store_name }} newsletter with {{ email }}.
+
+You will hear from us when new merchandise lands and when a sale starts — and
+not much more often than that.
+
+Visit the store: {{ client_url }}
+
+The {{ store_name }} team

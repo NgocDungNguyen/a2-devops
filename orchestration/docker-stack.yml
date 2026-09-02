@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - ALLOWED_HOSTS=*
+    ports:
+      - "8000:8000"
+    networks:
+      - appnet
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    ports:
+      - "80:80"
+    networks:
+      - appnet
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+networks:
+  appnet:

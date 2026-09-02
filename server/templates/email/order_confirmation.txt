@@ -1,0 +1,15 @@
+Hi {{ user.first_name|default:"there" }},
+
+Thanks for your order. Here is what we are packing:
+
+{% for item in order.items.all %}  {{ item.quantity }} x {{ item.product_name }} — {{ item.total_price }}{% if item.taxable %} (+ {{ item.total_tax }} tax){% endif %}
+{% endfor %}
+Subtotal:      {{ order.subtotal }}
+Sales tax:     {{ order.total_tax }}
+Shipping:      Free
+Order total:   {{ order.total }}
+
+Order number:  #{{ order.id }}
+Track it here: {{ client_url }}/order/{{ order.id }}
+
+The {{ store_name }} team

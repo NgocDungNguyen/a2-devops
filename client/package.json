@@ -1,0 +1,27 @@
+{
+  "name": "rmit-store-client",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RMIT Store single-page frontend (Vue 3 + Vite)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/poppins": "^5.1.0",
+    "@popperjs/core": "^2.11.8",
+    "@vueform/slider": "^2.1.10",
+    "axios": "^1.7.7",
+    "bootstrap": "^5.3.3",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass": "^1.81.0",
+    "vite": "^5.4.11"
+  }
+}

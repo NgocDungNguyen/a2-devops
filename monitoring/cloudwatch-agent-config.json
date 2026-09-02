@@ -1,0 +1,40 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "cwagent"
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "totalcpu": true,
+        "measurement": [
+          "usage_active",
+          "usage_user",
+          "usage_system",
+          "usage_iowait"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent",
+          "mem_available"
+        ]
+      },
+      "disk": {
+        "resources": ["/"],
+        "measurement": [
+          "disk_used_percent"
+        ]
+      },
+      "swap": {
+        "measurement": [
+          "swap_used_percent"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+Hi {{ merchant.name }},
+
+Your application to sell on the {{ store_name }} has been approved, and your
+existing account has been upgraded to a seller account — sign in as usual.
+
+    {{ client_url }}/login
+
+Your brand "{{ brand.name }}" has been created. An administrator needs to
+activate it before your products appear in the store.
+
+Add your first product: {{ client_url }}/dashboard/product/add
+
+The {{ store_name }} team

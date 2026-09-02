@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation for RMIT Store: RDS PostgreSQL 16, S3, and IAM Roles'
+
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Enter the password for the RDS PostgreSQL database
+    MinLength: 8
+
+Resources:
+  # 1. S3 BUCKET
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # 2. IAM ROLE & INSTANCE PROFILE
+  EC2S3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: RMITStoreS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:*
+                Resource: 
+                  - !Sub "arn:aws:s3:::${MediaBucket}"
+                  - !Sub "arn:aws:s3:::${MediaBucket}/*"
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: "*"
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2S3AccessRole
+
+  # 3. SECURITY GROUPS
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH, HTTP, 8000 and 5173
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 5173
+          ToPort: 5173
+          CidrIp: 0.0.0.0/0
+
+  DatabaseSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow EC2 to access PostgreSQL
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !GetAtt WebServerSG.GroupId
+
+  # 4. RDS DATABASE
+  RMITDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      EngineVersion: "16"
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      DBName: rmit_store
+      MasterUsername: rmit
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !GetAtt DatabaseSG.GroupId
+      PubliclyAccessible: false
+
+  # 5. ECR REPOSITORY
+  BackendECRRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: rmit-store-backend
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+Outputs:
+  RDSEndpoint:
+    Description: Endpoint to put in the Django .env file
+    Value: !GetAtt RMITDatabase.Endpoint.Address
+  S3BucketName:
+    Description: S3 Bucket Name to put in the .env file
+    Value: !Ref MediaBucket
+  ECRRepositoryUri:
+    Description: ECR URI for Backend
+    Value: !GetAtt BackendECRRepo.RepositoryUri

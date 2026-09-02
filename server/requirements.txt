@@ -1,0 +1,30 @@
+# RMIT Store — API runtime dependencies
+#
+# Install with:  pip install -r requirements.txt
+#
+# Runtime only. Whatever your test suite needs — a runner, factories, mocks —
+# goes in a requirements-dev.txt of your own.
+
+Django>=5.1,<5.3
+djangorestframework>=3.15,<3.17
+djangorestframework-simplejwt[crypto]>=5.3,<6.0
+django-cors-headers>=4.4,<5.0
+django-environ>=0.11,<0.13
+django-filter>=24.3,<26.0
+drf-spectacular>=0.27,<0.29
+
+# Database driver (psycopg 3). The binary wheel avoids needing libpq headers.
+psycopg[binary]>=3.2,<4.0
+
+# Static file serving straight from gunicorn, so the Django admin and the
+# browsable API still work on a bare EC2 box before nginx exists (Plan B).
+whitenoise[brotli]>=6.7,<7.0
+
+# Product image uploads
+Pillow>=10.4
+
+# Optional S3 media backend, enabled with USE_S3=true (see README, Plan F).
+django-storages[s3]>=1.14,<2.0
+
+# WSGI server for anything that is not `manage.py runserver`.
+gunicorn>=22.0

@@ -1,0 +1,207 @@
+pipeline {
+    agent any
+
+    environment {
+        E2E_BASE_URL = "http://127.0.0.1"
+        E2E_EMAIL_DIR = "${WORKSPACE}/server/.dev-emails"
+    }
+
+    stages {
+        stage('Backend: install & test') {
+            steps {
+                dir('server') {
+                    echo 'Creating Python virtual environment...'
+                    sh 'python3 -m venv .venv'
+                    echo 'Installing backend dependencies...'
+                    sh '.venv/bin/pip install -r requirements-dev.txt'
+                    echo 'Running backend unit and integration tests...'
+                    sh '''
+                        mkdir -p results
+                        .venv/bin/pytest \
+                            --junitxml=results/junit.xml \
+                            --cov=apps \
+                            --cov-report=xml:results/coverage.xml \
+                            --cov-report=term
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit(
+                        allowEmptyResults: true,
+                        testResults: 'server/results/junit.xml'
+                    )
+                }
+            }
+        }
+
+        stage('Frontend: install & build') {
+            steps {
+                dir('client') {
+                    echo 'Installing frontend dependencies...'
+                    sh 'npm ci'
+                    echo 'Building Vue frontend...'
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                echo 'Building Frontend Docker image...'
+                sh 'docker build -t rmit-store-frontend ./client'
+                echo 'Building Backend Docker image...'
+                sh 'docker build -t rmit-store-backend ./server'
+            }
+        }
+
+        stage('Start CI Environment for E2E') {
+            steps {
+                echo 'Cleaning previous CI containers...'
+                sh 'docker-compose down --remove-orphans || true'
+                echo 'Preparing E2E email directory...'
+                sh 'mkdir -p server/.dev-emails'
+                echo 'Starting PostgreSQL, Backend and Frontend...'
+                sh 'docker-compose up -d'
+                echo 'Waiting for containers to initialise...'
+                sh 'sleep 15'
+                echo 'Docker Compose status...'
+                sh 'docker-compose ps'
+                echo 'Running database migrations...'
+                sh 'docker-compose exec -T backend python manage.py migrate'
+                echo 'Seeding demo catalogue and admin account...'
+                sh '''
+                    docker-compose exec -T backend \
+                        python manage.py seed_demo \
+                        --admin-email admin@rmit.edu.au \
+                        --admin-password "RmitStore2767!"
+                '''
+                echo 'Configuring Frontend API URL...'
+                sh '''
+                    docker-compose exec -T frontend sh -c \
+                    "echo \\"window.CONFIG = { API_URL: 'http://127.0.0.1:8000' };\\" \
+                    > /usr/share/nginx/html/config.js"
+                '''
+            }
+        }
+
+        stage('E2E: web UI journeys') {
+            steps {
+                echo 'Running full Playwright E2E test suite...'
+                sh '''
+                    sed -i 's/await page.goto(signupLink)/const fixedLink = signupLink.replace("localhost:5173", "127.0.0.1"); await page.goto(fixedLink)/g' e2e/tests/seller-lifecycle.spec.js
+                '''
+                sh """
+                    docker run --rm \\
+                        --network host \\
+                        --ipc=host \\
+                        -e E2E_BASE_URL=${E2E_BASE_URL} \\
+                        -e BASE_URL=${E2E_BASE_URL} \\
+                        -e TEST_PASSWORD='RmitStore2767!' \\
+                        -e ADMIN_PASSWORD='RmitStore2767!' \\
+                        -e E2E_EMAIL_DIR=/server/.dev-emails \\
+                        -v ${WORKSPACE}/e2e:/e2e \\
+                        -v ${WORKSPACE}/server:/server \\
+                        -w /e2e \\
+                        mcr.microsoft.com/playwright:v1.62.1-jammy \\
+                        bash -c 'npm ci && npx playwright test'
+                """
+            }
+            post {
+                always {
+                    echo 'Archiving Playwright artifacts...'
+                    archiveArtifacts(
+                        artifacts: 'e2e/test-results/**/*',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
+        stage('Smoke test (CI Container)') {
+            steps {
+                echo 'Running deployment smoke test...'
+                sh '''
+                    python3 scripts/smoke_test.py \
+                        --base-url http://127.0.0.1:8000 \
+                        --retries 5 \
+                        --retry-delay 5
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Production deployment must not continue.'
+        }
+        always {
+            echo 'Cleaning CI Docker environment...'
+            sh 'docker-compose down --remove-orphans || true'
+            echo 'CI environment cleaned.'
+        }
+    }
+	stage('Push Docker Images to AWS ECR') {
+            environment {
+                // Nhắc Role 1 cung cấp AWS_ACCOUNT_ID và REGION
+                AWS_ACCOUNT_ID = "123456789012" 
+                AWS_REGION = "ap-southeast-2"
+                ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            }
+            steps {
+                script {
+                    echo "Logging into AWS ECR..."
+                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
+                    
+                    echo "Tagging & Pushing Frontend..."
+                    sh "docker tag rmit-store-frontend:latest ${ECR_REGISTRY}/rmit-store-frontend:${env.BUILD_NUMBER}"
+                    sh "docker push ${ECR_REGISTRY}/rmit-store-frontend:${env.BUILD_NUMBER}"
+
+                    echo "Tagging & Pushing Backend..."
+                    sh "docker tag rmit-store-backend:latest ${ECR_REGISTRY}/rmit-store-backend:${env.BUILD_NUMBER}"
+                    sh "docker push ${ECR_REGISTRY}/rmit-store-backend:${env.BUILD_NUMBER}"
+                }
+            }
+        }
+
+        stage('Deploy to Staging Server') {
+            environment {
+                // Nhắc Role 1 cung cấp IP của máy EC2 mới
+                STAGING_IP = "13.236.x.x" 
+                AWS_ACCOUNT_ID = "123456789012"
+                AWS_REGION = "ap-southeast-2"
+                ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            }
+            steps {
+                // Bọc stage này bằng credential SSH đã tạo ở Bước 1
+                sshagent(credentials: ['staging-server-ssh']) {
+                    script {
+                        echo "Copying orchestration files to Staging Server..."
+                        // Copy thư mục orchestration (chứa docker-stack.yml và nginx-swarm.conf của Role 5) sang máy mới
+                        sh "scp -o StrictHostKeyChecking=no -r orchestration ec2-user@${STAGING_IP}:/home/ec2-user/"
+                        
+                        echo "Connecting to Staging Server and Deploying..."
+                        // SSH sang máy mới và chạy lệnh deploy
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@${STAGING_IP} '
+                            # Đăng nhập ECR trên máy Staging để có quyền kéo image
+                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                            
+                            # Khai báo các biến môi trường cho file docker-stack.yml của Role 5
+                            export BACKEND_IMAGE=${ECR_REGISTRY}/rmit-store-backend:${env.BUILD_NUMBER}
+                            export FRONTEND_IMAGE=${ECR_REGISTRY}/rmit-store-frontend:${env.BUILD_NUMBER}
+                            export USE_S3=true
+                            export AWS_STORAGE_BUCKET_NAME=rmit-store-media-bucket-name # Nhắc Role 1 cung cấp
+                            
+                            # Triển khai Swarm stack
+                            docker stack deploy --with-registry-auth -c /home/ec2-user/orchestration/docker-stack.yml rmit-staging
+                        '
+                        """
+                    }
+                }
+            }
+        }	
+}

@@ -1,0 +1,15 @@
+A seller application has been submitted to the {{ store_name }}.
+
+Business:     {{ merchant.business }}
+Brand name:   {{ merchant.brand_name }}
+Contact:      {{ merchant.name }}
+Email:        {{ merchant.email }}
+Phone:        {{ merchant.phone_number }}
+Status:       {{ merchant.get_status_display }}
+
+If you are the applicant: thank you, we will review your application and be in
+touch shortly.
+
+If you are an administrator: review it at {{ client_url }}/dashboard/merchant
+
+The {{ store_name }} team

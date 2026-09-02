@@ -1,0 +1,49 @@
+// ---------------------------------------------------------------------------
+// RMIT Store theme
+//
+// The palette and typography are carried over verbatim from the previous
+// application's stylesheet so the store looks the same after the rewrite.
+// ---------------------------------------------------------------------------
+
+// Brand
+$rmit-red: #e60028; // primary
+$rmit-navy: #000054; // headings, footer, dark buttons
+
+// Greys
+$theme-gray: #f8f9fa;
+$theme-bright-gray: #eceef3;
+$theme-dark-gray: #cccccc;
+$theme-athens-gray: #f1f1f2;
+$theme-white: #f6f7f8;
+$body-text: #4a4a4a;
+$muted-text: #758696;
+
+// Status
+$theme-green: #00acac;
+$theme-yellow: #ffc107;
+$theme-danger: #dc3545;
+
+// Bootstrap overrides — these must be declared before Bootstrap is imported.
+$primary: $rmit-red;
+$secondary: #6c757d;
+$dark: $rmit-navy;
+$danger: $theme-danger;
+$success: $theme-green;
+
+$body-color: $body-text;
+$font-family-sans-serif: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  Roboto, sans-serif;
+$font-size-base: 0.9rem;
+$headings-font-weight: 600;
+
+$border-radius: 0.35rem;
+$btn-font-weight: 500;
+$link-decoration: none;
+
+$enable-shadows: false;
+$enable-gradients: false;
+
+// Layout
+$header-height: 72px;
+$drawer-width: 380px;
+$dashboard-sidebar-width: 250px;

@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# Secrets and local configuration
+#
+# `.env` files hold credentials and are never committed. Working out how to
+# supply these values in a pipeline without checking them in is part of the
+# assignment — AWS Secrets Manager, SSM Parameter Store, Jenkins credentials,
+# Ansible Vault and Kubernetes Secrets are all reasonable answers.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+junit.xml
+server/test_media/
+server/results/
+
+# --- Django ----------------------------------------------------------------
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# collectstatic output — generated at deploy time, never committed
+server/staticfiles/*
+!server/staticfiles/.gitkeep
+
+# Uploaded product images. In production these belong in S3, not on the
+# instance's disk (see USE_S3 in server/.env.example).
+server/media/
+
+# File-based email backend output (EMAIL_BACKEND=...filebased.EmailBackend),
+# used only when running the seller-lifecycle E2E test locally — see
+# TESTING.md. Never used with the default console backend.
+server/.dev-emails/
+
+# --- Node ------------------------------------------------------------------
+node_modules/
+client/dist/
+.npm
+*.tsbuildinfo
+
+# --- Playwright (e2e/) -------------------------------------------------
+e2e/results/
+e2e/test-results/
+e2e/playwright-report/
+e2e/playwright/.cache/
+
+# --- Editors and operating systems -----------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

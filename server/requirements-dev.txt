@@ -1,0 +1,19 @@
+# RMIT Store — API test/dev dependencies
+#
+# Install with:  pip install -r requirements-dev.txt
+# (pulls in requirements.txt too, so one install gets you a working test env)
+#
+# Not part of the deployed image — Dockerfiles and gunicorn only ever need
+# requirements.txt. This file exists purely for the CI "test" stage and for
+# a developer's local venv.
+
+-r requirements.txt
+
+# Test runner. Chosen over bare `manage.py test` for two things Jenkins
+# actually needs: `--junitxml` for the JUnit publisher and `pytest-cov` for a
+# coverage percentage in the build summary. Every test in this suite is still
+# a plain django.test.TestCase / rest_framework.test.APITestCase underneath,
+# so `python manage.py test` keeps working as a dependency-free fallback.
+pytest>=8.0,<9.0
+pytest-django>=4.9,<5.0
+pytest-cov>=5.0,<6.0

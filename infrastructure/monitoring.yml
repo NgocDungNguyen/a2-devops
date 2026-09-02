@@ -1,0 +1,242 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudWatch monitoring for the RMIT Store (Role 5): one dashboard showing
+  host CPU/memory, service availability, application health and live visitor
+  count, plus alarms on the numbers that mean "customers are affected".
+  Deploy AFTER the swarm node exists (it needs the instance id), e.g.:
+
+  aws cloudformation deploy --stack-name rmit-store-monitoring
+      --template-file infrastructure/monitoring.yml
+      --parameter-overrides ManagerInstanceId=i-0123456789abcdef0
+
+  Data sources: the CloudWatch agent (CWAgent namespace — install with
+  monitoring/install-monitoring.sh) and the per-minute publisher
+  (RMITStore namespace — same installer).
+
+Parameters:
+  ManagerInstanceId:
+    Type: AWS::EC2::Instance::Id
+    Description: Instance id of the Swarm manager node running the stack
+  SwarmStackName:
+    Type: String
+    Default: rmit
+    Description: Docker stack name (the Stack dimension on RMITStore metrics)
+  DashboardName:
+    Type: String
+    Default: RMIT-Store
+  MinHealthyBackendReplicas:
+    Type: Number
+    Default: 2
+    Description: Alarm when fewer backend tasks than this are running
+
+Resources:
+
+  # ------------------------------------------------------------------ alarms
+  ReadyzDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${SwarmStackName}-store-not-ready"
+      AlarmDescription: >
+        /readyz/ has failed (or stopped reporting) for 3 consecutive minutes —
+        the store cannot serve useful traffic.
+      Namespace: RMITStore
+      MetricName: ReadyzUp
+      Dimensions:
+        - Name: Stack
+          Value: !Ref SwarmStackName
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+
+  BackendReplicasLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${SwarmStackName}-backend-replicas-low"
+      AlarmDescription: Fewer backend tasks running than the healthy minimum.
+      Namespace: RMITStore
+      MetricName: BackendReplicasRunning
+      Dimensions:
+        - Name: Stack
+          Value: !Ref SwarmStackName
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: !Ref MinHealthyBackendReplicas
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${SwarmStackName}-cpu-high"
+      AlarmDescription: Sustained CPU above 85% on the Swarm manager node.
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ManagerInstanceId
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  HighMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${SwarmStackName}-memory-high"
+      AlarmDescription: Sustained memory usage above 90% on the manager node.
+      Namespace: CWAgent
+      MetricName: mem_used_percent
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ManagerInstanceId
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  # --------------------------------------------------------------- dashboard
+  StoreDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Ref DashboardName
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text", "x": 0, "y": 0, "width": 24, "height": 1,
+              "properties": {
+                "markdown": "## RMIT Store — swarm stack `${SwarmStackName}` on `${ManagerInstanceId}` &nbsp;&nbsp; CPU / RAM / availability / health / live visitors"
+              }
+            },
+            {
+              "type": "metric", "x": 0, "y": 1, "width": 4, "height": 5,
+              "properties": {
+                "title": "People on the store (5 min)",
+                "view": "singleValue", "sparkline": true,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["RMITStore", "ActiveVisitors5m", "Stack", "${SwarmStackName}", {"stat": "Maximum", "label": "visitors"}]
+                ],
+                "period": 60
+              }
+            },
+            {
+              "type": "metric", "x": 4, "y": 1, "width": 5, "height": 5,
+              "properties": {
+                "title": "Application health (1 = up)",
+                "view": "singleValue", "sparkline": true,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["RMITStore", "HealthzUp", "Stack", "${SwarmStackName}", {"stat": "Minimum", "label": "/healthz/"}],
+                  ["RMITStore", "ReadyzUp",  "Stack", "${SwarmStackName}", {"stat": "Minimum", "label": "/readyz/"}]
+                ],
+                "period": 60
+              }
+            },
+            {
+              "type": "alarm", "x": 9, "y": 1, "width": 15, "height": 5,
+              "properties": {
+                "title": "Alarms",
+                "alarms": [
+                  "${ReadyzDownAlarm.Arn}",
+                  "${BackendReplicasLowAlarm.Arn}",
+                  "${HighCpuAlarm.Arn}",
+                  "${HighMemoryAlarm.Arn}"
+                ]
+              }
+            },
+            {
+              "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "CPU utilisation (%)",
+                "view": "timeSeries", "stat": "Average", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["AWS/EC2", "CPUUtilization", "InstanceId", "${ManagerInstanceId}", {"label": "manager node"}]
+                ],
+                "yAxis": {"left": {"min": 0, "max": 100}},
+                "annotations": {"horizontal": [{"label": "alarm", "value": 85}]}
+              }
+            },
+            {
+              "type": "metric", "x": 12, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "Memory used (%)",
+                "view": "timeSeries", "stat": "Average", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["CWAgent", "mem_used_percent", "InstanceId", "${ManagerInstanceId}", {"label": "manager node"}]
+                ],
+                "yAxis": {"left": {"min": 0, "max": 100}},
+                "annotations": {"horizontal": [{"label": "alarm", "value": 90}]}
+              }
+            },
+            {
+              "type": "metric", "x": 0, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "Service availability — running tasks per Swarm service",
+                "view": "timeSeries", "stat": "Minimum", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["RMITStore", "BackendReplicasRunning",  "Stack", "${SwarmStackName}", {"label": "backend"}],
+                  ["RMITStore", "BackendReplicasDesired",  "Stack", "${SwarmStackName}", {"label": "backend desired", "color": "#aec7e8"}],
+                  ["RMITStore", "CanaryReplicasRunning",   "Stack", "${SwarmStackName}", {"label": "canary"}],
+                  ["RMITStore", "FrontendReplicasRunning", "Stack", "${SwarmStackName}", {"label": "frontend"}],
+                  ["RMITStore", "DatabaseReplicasRunning", "Stack", "${SwarmStackName}", {"label": "database"}]
+                ],
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric", "x": 12, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "Visitor activity",
+                "view": "timeSeries", "stat": "Maximum", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["RMITStore", "ActiveVisitors5m",  "Stack", "${SwarmStackName}", {"label": "last 5 min"}],
+                  ["RMITStore", "ActiveVisitors15m", "Stack", "${SwarmStackName}", {"label": "last 15 min"}]
+                ],
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric", "x": 0, "y": 18, "width": 12, "height": 5,
+              "properties": {
+                "title": "Application health over time (1 = up)",
+                "view": "timeSeries", "stat": "Minimum", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  ["RMITStore", "HealthzUp", "Stack", "${SwarmStackName}", {"label": "/healthz/"}],
+                  ["RMITStore", "ReadyzUp",  "Stack", "${SwarmStackName}", {"label": "/readyz/"}]
+                ],
+                "yAxis": {"left": {"min": 0, "max": 1}}
+              }
+            },
+            {
+              "type": "metric", "x": 12, "y": 18, "width": 12, "height": 5,
+              "properties": {
+                "title": "Disk used (%) — root volume",
+                "view": "timeSeries", "period": 60,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [{"expression": "SEARCH('{CWAgent,InstanceId,device,fstype,path} MetricName=\"disk_used_percent\" InstanceId=\"${ManagerInstanceId}\"', 'Average', 60)", "label": "", "id": "disk"}]
+                ],
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
+            }
+          ]
+        }
+
+Outputs:
+  DashboardUrl:
+    Description: Open this to see the dashboard
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${DashboardName}"

@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:14-alpine
+
+    environment:
+      POSTGRES_DB: rmit_store
+      POSTGRES_USER: rmit_user
+      POSTGRES_PASSWORD: rmit_password
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rmit_user -d rmit_store"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  backend:
+    image: ${BACKEND_IMAGE:-rmit-store-backend}
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: postgres://rmit_user:rmit_password@db:5432/rmit_store
+
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+
+      SECRET_KEY: ci-dummy-secret-key-12345
+
+      ALLOWED_HOSTS: "*"
+      FRONTEND_URL: "http://127.0.0.1" 
+      # CI frontend is on port 80 while backend is on port 8000.
+      CORS_ALLOW_ALL_ORIGINS: "True"
+
+      # E2E emails are written to the mounted directory below.
+      EMAIL_BACKEND: django.core.mail.backends.filebased.EmailBackend
+      EMAIL_FILE_PATH: /app/.dev-emails
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    volumes:
+      - ./server/.dev-emails:/app/.dev-emails
+
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-rmit-store-frontend}
+    ports:
+      - "80:80"
+    depends_on: 
+      - backend
